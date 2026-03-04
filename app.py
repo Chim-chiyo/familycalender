@@ -240,7 +240,7 @@ def calendar():
   .weekday:first-child { color: #e53935; }
   .weekday:last-child { color: #1565c0; }
   .days { display: grid; grid-template-columns: repeat(7, 1fr); }
-  .day { min-height: 64px; padding: 4px; border-top: 1px solid #f0f0f0; border-right: 1px solid #f0f0f0; position: relative; }
+  .day { min-height: 64px; padding: 4px; border-top: 1px solid #f0f0f0; border-right: 1px solid #f0f0f0; position: relative; overflow: hidden; }
   .day:nth-child(7n) { border-right: none; }
   .day-num { font-size: 13px; font-weight: 500; margin-bottom: 2px; }
   .day.sunday .day-num { color: #e53935; }
@@ -248,7 +248,7 @@ def calendar():
   .day.today .day-num { background: #4CAF50; color: white; border-radius: 50%; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; }
   .day.other-month { background: #fafafa; }
   .day.other-month .day-num { color: #ccc; }
-  .event { background: #E8F5E9; color: #2E7D32; font-size: 10px; border-radius: 4px; padding: 2px 4px; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; }
+  .event { background: #E8F5E9; color: #2E7D32; font-size: 9px; border-radius: 3px; padding: 1px 3px; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; max-width: 100%; display: block; }
   .event:hover { background: #C8E6C9; }
   .event-list { margin: 12px; }
   .event-list h2 { font-size: 16px; margin-bottom: 8px; color: #555; }
@@ -301,7 +301,8 @@ function deleteEvent(id) {
 }
 
 function render() {
-  const today = new Date();
+  const now = new Date();
+  const today = new Date(now.toLocaleString('ja-JP', {timeZone: 'Asia/Tokyo'}));
   const label = currentYear + '年' + (currentMonth + 1) + '月';
   document.getElementById('monthLabel').textContent = label;
 

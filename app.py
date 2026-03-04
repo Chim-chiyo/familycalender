@@ -190,28 +190,41 @@ def handle_image(event):
     reply = f"✅ プリントから{len(extracted)}件の予定を登録しました！\n\n{summary}\n\nカレンダー👇\n" + os.environ.get("APP_URL", "") + "/calendar"
     line_bot_api.reply_message(event.reply_token, TextSendMessage(text=reply))
 
+def notify_other_user(sender_id, message):
+    user1 = os.environ.get("USER_ID_1", "")
+    user2 = os.environ.get("USER_ID_2", "")
+    target = user2 if sender_id == user1 else user1
+    if target:
+        try:
+            line_bot_api.push_message(target, TextSendMessage(text=message))
+        except:
+            pass
+
 @handler.add(MessageEvent, message=TextMessage)
 def handle_message(event):
     text = event.message.text
-    
-    # ヘルプ
+    sender_id = event.source.user_id
+
+    if text.lower() in ["myid", "userid"]:
+        reply = f"あなたのユーザーIDは👇\n{sender_id}\n\nこのIDをRenderの環境変数に設定してください！"
+        line_bot_api.reply_message(event.reply_token, TextSendMessage(text=reply))
+        return
+
     if text in ["ヘルプ", "help", "使い方"]:
         reply = "📅 使い方\n\n「3/4 飲み会」のように日付＋予定を送ると自動登録します！\n\nカレンダー確認はこちら👇\n" + os.environ.get("APP_URL", "") + "/calendar"
         line_bot_api.reply_message(event.reply_token, TextSendMessage(text=reply))
         return
-    
-    # イベント解析
+
     parsed = parse_event(text)
     if parsed:
         events = load_events()
         events.append(parsed)
         save_events(events)
-        
         date_str = datetime.strptime(parsed["date"], "%Y-%m-%d").strftime("%m月%d日")
         reply = f"✅ 登録しました！\n📅 {date_str}「{parsed['title']}」\n\nカレンダー👇\n" + os.environ.get("APP_URL", "") + "/calendar"
         line_bot_api.reply_message(event.reply_token, TextSendMessage(text=reply))
+        notify_other_user(sender_id, f"📅 新しい予定が追加されました！\n{date_str}「{parsed['title']}」\n\nカレンダー👇\n" + os.environ.get("APP_URL", "") + "/calendar")
     else:
-        # 日付が見つからない場合はスルー（反応しない）
         pass
 
 @app.route("/calendar")

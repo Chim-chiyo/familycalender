@@ -78,6 +78,7 @@ def ocr_image(image_content):
 def extract_nencho_events(text):
     events = []
     lines = text.split("\n")
+    current_month = None
     current_date = None
     current_year = datetime.now().year
     nencho_keywords = ["年長", "5歳", "ひまわり", "ゆり", "さくら", "全園", "全学年", "全クラス", "全員"]
@@ -86,24 +87,51 @@ def extract_nencho_events(text):
         line = line.strip()
         if not line:
             continue
-        date_match = re.search(r'(\d{1,2})[月/／](\d{1,2})', line)
-        if date_match:
-            month, day = int(date_match.group(1)), int(date_match.group(2))
+
+        # 「●4月の予定」「5月の予定」など月見出しを検出
+        month_header = re.search(r'(\d{1,2})月の?予定', line)
+        if month_header:
+            current_month = int(month_header.group(1))
+            continue
+
+        # 月/日パターン（例：4/8、4月8日）
+        full_date = re.search(r'(\d{1,2})[月/／](\d{1,2})', line)
+        if full_date:
+            month, day = int(full_date.group(1)), int(full_date.group(2))
             try:
                 d = datetime(current_year, month, day)
                 if d < datetime.now() - timedelta(days=1):
                     d = datetime(current_year + 1, month, day)
                 current_date = d
+                current_month = month
             except:
                 pass
+
+        # 日だけのパターン（例：「8日」「○8日」）→ current_monthと組み合わせ
+        elif current_month:
+            day_only = re.search(r'[○◯〇Ｏ・\s]?(\d{1,2})日', line)
+            if day_only:
+                day = int(day_only.group(1))
+                try:
+                    d = datetime(current_year, current_month, day)
+                    if d < datetime.now() - timedelta(days=1):
+                        d = datetime(current_year + 1, current_month, day)
+                    current_date = d
+                except:
+                    pass
+
         if current_date is None:
             continue
+
         has_nencho = any(kw in line for kw in nencho_keywords)
+        has_other_grade = any(kw in line for kw in ["年少", "年中", "3歳", "4歳"])
         no_grade_specified = not re.search(r'年少|年中|年長|3歳|4歳|5歳', line)
-        if has_nencho or (no_grade_specified and current_date):
+
+        if has_nencho or (no_grade_specified and not has_other_grade and current_date):
             title = re.sub(r'\d{1,2}[月/／]\d{1,2}日?', '', line)
+            title = re.sub(r'\d{1,2}日', '', title)
             title = re.sub(r'年長|全園|全学年|全クラス|全員|5歳|（.*?）|\(.*?\)', '', title)
-            title = re.sub(r'[●◎○・\-\s　]+', ' ', title).strip()
+            title = re.sub(r'[●◎○◯〇・\-\s　※]+', ' ', title).strip()
             if len(title) < 2:
                 continue
             events.append({
